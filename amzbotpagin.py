@@ -6,75 +6,61 @@ from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import time
 
-# ---------------------------
-# Chrome Options (stable)
-# ---------------------------
+
 options = Options()
 options.add_argument("--headless=new")
-options.add_argument("--window-size=1920,1080")
 options.add_argument("--disable-gpu")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--window-size=1920,1080")
 
-# ✅ Let Selenium manage driver automatically (NO Service, NO path)
 driver = webdriver.Chrome(options=options)
+wait = WebDriverWait(driver, 10)
 
-wait = WebDriverWait(driver, 20)
-
-web = "https://www.audible.com/search"
-driver.get(web)
-
-# ---------------------------
-# Pagination
-# ---------------------------
-
-pagination = driver.find_elements(By.XPATH, '//ul[contains(@class, "pagingElements")]') '
-
-pages = pagination.find_elements(By.TAG_NAME, 'li')
-
-last_page = int(pages[-2].text)   # second last is last page number
-
-next_page = driver.find_element(By.XPATH, '//span[contains(@class, "nextButton")]')
-next_page.click()
-
-
-
-# //a[contains(@class, "bc-button-text")]
-
-# ---------------------------
-# Wait for products to load
-# ---------------------------
-wait.until(
-    EC.presence_of_element_located(
-        (By.XPATH, '//li[contains(@class,"bc-list-item")]')
-    )
-)
-
-time.sleep(3)  # extra load safety (Audible lazy loads)
-
-products = driver.find_elements(
-    By.XPATH, '//li[contains(@class,"bc-list-item")]'
-)
+driver.get("https://www.audible.com/charts/best")
 
 book_titles = []
+page_no = 1
 
-for product in products:
-    try:
-        title = product.find_element(By.XPATH, './/h3//a').text.strip()
-        if title:
+
+while True:
+    print(f"Scraping page {page_no}...")
+
+    products = wait.until(
+        EC.presence_of_all_elements_located(
+            (By.CSS_SELECTOR, "li.bc-list-item")
+        )
+    )
+
+    # scrape titles
+    for p in products:
+        try:
+            title = p.find_element(By.CSS_SELECTOR, "h3 a").text.strip()
             book_titles.append(title)
-    except:
-        continue
+        except:
+            pass
 
-# remove duplicates
-book_titles = list(dict.fromkeys(book_titles))
+    # 🔥 FIXED SELECTOR HERE
+    try:
+        next_btn = driver.find_element(By.CSS_SELECTOR, "span.nextButton > a")
+
+        # click using JS
+        driver.execute_script("arguments[0].click();", next_btn)
+
+        wait.until(EC.staleness_of(products[0]))
+
+        page_no += 1
+
+    except:
+        print("No more pages found. Stopping...")
+        break
+
 
 driver.quit()
 
-# ---------------------------
-# Save CSV
-# ---------------------------
-df = pd.DataFrame({'Title': book_titles})
-df.to_csv('audible_books_headless.csv1', index=False, encoding='utf-8')
+book_titles = list(dict.fromkeys(book_titles))
 
-print(f"Saved {len(book_titles)} books")
+pd.DataFrame({"Title": book_titles}).to_csv(
+    "audible_books_allpages.csv",
+    index=False
+)
+
+print(f"\n✅ Saved {len(book_titles)} books")
