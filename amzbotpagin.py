@@ -25,6 +25,23 @@ web = "https://www.audible.com/search"
 driver.get(web)
 
 # ---------------------------
+# Pagination
+# ---------------------------
+
+pagination = driver.find_elements(By.XPATH, '//ul[contains(@class, "pagingElements")]') '
+
+pages = pagination.find_elements(By.TAG_NAME, 'li')
+
+last_page = int(pages[-2].text)   # second last is last page number
+
+next_page = driver.find_element(By.XPATH, '//span[contains(@class, "nextButton")]')
+next_page.click()
+
+
+
+# //a[contains(@class, "bc-button-text")]
+
+# ---------------------------
 # Wait for products to load
 # ---------------------------
 wait.until(
