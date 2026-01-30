@@ -1,35 +1,42 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
+import time
 
+# ---------------------------
+# Chrome Options (stable)
+# ---------------------------
 options = Options()
-
-# 🔥 NEW HEADLESS MODE
 options.add_argument("--headless=new")
 options.add_argument("--window-size=1920,1080")
 options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
-path = r"C:/Users/amjad/Downloads/chromedriver-win64 (1)/chromedriver-win64/chromedriver.exe"
-service = Service(executable_path=path)
+# ✅ Let Selenium manage driver automatically (NO Service, NO path)
+driver = webdriver.Chrome(options=options)
 
-# ✅ OPTIONS YAHAN DENI HOTI HAIN
-driver = webdriver.Chrome(service=service, options=options)
+wait = WebDriverWait(driver, 20)
 
 web = "https://www.audible.com/search"
 driver.get(web)
 
-wait = WebDriverWait(driver, 20)
-
-products = wait.until(
-    EC.presence_of_all_elements_located(
+# ---------------------------
+# Wait for products to load
+# ---------------------------
+wait.until(
+    EC.presence_of_element_located(
         (By.XPATH, '//li[contains(@class,"bc-list-item")]')
     )
+)
+
+time.sleep(3)  # extra load safety (Audible lazy loads)
+
+products = driver.find_elements(
+    By.XPATH, '//li[contains(@class,"bc-list-item")]'
 )
 
 book_titles = []
@@ -37,15 +44,20 @@ book_titles = []
 for product in products:
     try:
         title = product.find_element(By.XPATH, './/h3//a').text.strip()
-        book_titles.append(title)
+        if title:
+            book_titles.append(title)
     except:
-        pass
+        continue
 
+# remove duplicates
 book_titles = list(dict.fromkeys(book_titles))
 
 driver.quit()
 
-df_books = pd.DataFrame({'Title': book_titles})
-df_books.to_csv('audible_books_headless.csv', index=False, encoding='utf-8')
+# ---------------------------
+# Save CSV
+# ---------------------------
+df = pd.DataFrame({'Title': book_titles})
+df.to_csv('audible_books_headless.csv1', index=False, encoding='utf-8')
 
-print("Saved", len(book_titles), "books")
+print(f"Saved {len(book_titles)} books")
