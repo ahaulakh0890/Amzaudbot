@@ -1,5 +1,4 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -15,11 +14,7 @@ options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 
-path = r"C:/Users/amjad/Downloads/chromedriver-win64 (1)/chromedriver-win64/chromedriver.exe"
-service = Service(executable_path=path)
-
-# ✅ OPTIONS YAHAN DENI HOTI HAIN
-driver = webdriver.Chrome(service=service, options=options)
+driver = webdriver.Chrome(options=options)
 
 web = "https://www.audible.com/search"
 driver.get(web)
